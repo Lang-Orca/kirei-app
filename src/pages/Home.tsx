@@ -1,75 +1,289 @@
-import { Link } from 'react-router-dom';
-import { Clock, MapPin, Sparkles, Truck } from 'lucide-react';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { ArrowRight, Download, RotateCw, Sparkles, LogOut, Shield, User as UserIcon } from 'lucide-react';
 
 export default function Home() {
-  return (
-    <div className="flex flex-col gap-20 py-10">
-      {/* Hero Section */}
-      <section className="max-w-5xl mx-auto px-4 w-full">
-        <div className="bg-indigo-600 rounded-3xl p-8 md:p-16 text-white flex flex-col md:flex-row items-center gap-10 overflow-hidden relative">
-          <div className="flex-1 space-y-6 relative z-10 text-center md:text-left">
-            <h1 className="text-4xl md:text-6xl font-extrabold leading-tight">
-              Votre linge propre en quelques clics.
-            </h1>
-            <p className="text-indigo-100 text-lg md:text-xl max-w-lg">
-              Kirei s'occupe de tout : lavage, repassage et livraison à domicile. Simple, rapide et sans effort.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center md:justify-start">
-              <Link to="/order" className="bg-white text-indigo-600 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-50 transition-colors shadow-lg shadow-indigo-900/20">
-                Commander en 1 minute
-              </Link>
-            </div>
-          </div>
-          <div className="flex-1 relative hidden md:block">
-             <div className="bg-indigo-500/30 w-80 h-80 rounded-full blur-3xl absolute -top-20 -right-20"></div>
-             <div className="relative z-10 bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl rotate-3">
-                <Sparkles className="text-white w-12 h-12 mb-4" />
-                <p className="text-2xl font-bold">Lavage Eco-Responsable</p>
-                <p className="text-indigo-100 mt-2">Nous utilisons des techniques de nettoyage à l'eau respectueuses de l'environnement.</p>
-             </div>
-          </div>
-        </div>
-      </section>
+  const navigate = useNavigate();
+  const { role, logout } = useAuth();
 
-      {/* Steps Section */}
-      <section className="max-w-5xl mx-auto px-4 w-full">
-        <h2 className="text-3xl font-bold text-center mb-12">Comment ça marche ?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            { icon: <MapPin />, title: "Adresse & Horaire", text: "Entrez votre adresse et choisissez vos créneaux de collecte." },
-            { icon: <Clock />, title: "Collecte express", text: "Un groom récupère votre linge directement à votre porte." },
-            { icon: <Truck />, title: "Retour impeccable", text: "Recevez votre linge propre, plié ou repassé sous 48h." }
-          ].map((step, i) => (
-            <div key={i} className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6">
-                {step.icon}
+  // Rediriger si admin, sinon afficher bienvenue ou contenu client
+  useEffect(() => {
+    if (role === 'admin') {
+      navigate('/admin');
+    }
+  }, [role, navigate]);
+
+  function handleLogout() {
+    logout();
+    navigate('/home');
+  }
+
+  // Page de bienvenue (pas connecté)
+  if (role === null) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        {/* Hero Section */}
+        <section className="pt-32 pb-20 px-4">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <div className="inline-block">
+              <div className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-100 rounded-full">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-semibold text-indigo-600">Service de nettoyage à domicile</span>
               </div>
-              <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-              <p className="text-slate-500">{step.text}</p>
             </div>
-          ))}
+
+            <div>
+              <h2 className="text-5xl md:text-6xl font-bold text-slate-900 mb-4">
+                Bienvenue sur Kirei
+              </h2>
+              <p className="text-xl md:text-2xl text-slate-600 font-light">
+                Votre solution de nettoyage simple et efficace
+              </p>
+            </div>
+
+            <p className="text-lg text-slate-500 max-w-2xl mx-auto">
+              Déposez vos vêtements et laissez nos professionnels s'en charger. Récupérez-les propres et prêts à porter.
+            </p>
+          </div>
+        </section>
+
+        {/* Login Options */}
+        <section className="px-4 pb-32">
+          <div className="max-w-2xl mx-auto grid md:grid-cols-2 gap-8">
+            {/* Client Login */}
+            <button
+              onClick={() => navigate('/login', { state: { userType: 'client' } })}
+              className="group relative overflow-hidden rounded-3xl bg-white border-2 border-indigo-100 p-8 text-left transition-all hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-200"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              
+              <div className="relative space-y-4">
+                <div className="inline-flex p-3 bg-indigo-100 rounded-2xl group-hover:bg-indigo-200 transition-colors">
+                  <UserIcon className="w-6 h-6 text-indigo-600" />
+                </div>
+
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">Je suis client</h3>
+                  <p className="text-slate-600">
+                    Déposez et récupérez votre linge facilement
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 text-indigo-600 font-semibold pt-2 group-hover:gap-3 transition-all">
+                  Se connecter
+                  <ArrowRight className="w-5 h-5" />
+                </div>
+              </div>
+            </button>
+
+            {/* Admin Login */}
+            <button
+              onClick={() => navigate('/login', { state: { userType: 'admin' } })}
+              className="group relative overflow-hidden rounded-3xl bg-white border-2 border-purple-100 p-8 text-left transition-all hover:border-purple-400 hover:shadow-xl hover:shadow-purple-200"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+              <div className="relative space-y-4">
+                <div className="inline-flex p-3 bg-purple-100 rounded-2xl group-hover:bg-purple-200 transition-colors">
+                  <Shield className="w-6 h-6 text-purple-600" />
+                </div>
+
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">Je suis admin</h3>
+                  <p className="text-slate-600">
+                    Gérez les commandes et les grooms
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 text-purple-600 font-semibold pt-2 group-hover:gap-3 transition-all">
+                  Se connecter
+                  <ArrowRight className="w-5 h-5" />
+                </div>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="px-4 pb-16 bg-slate-900 text-white rounded-t-3xl">
+          <div className="max-w-4xl mx-auto py-12">
+            <h2 className="text-3xl font-bold text-center mb-12">Pourquoi nous faire confiance?</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="text-4xl mb-4">⚡</div>
+                <h3 className="text-xl font-semibold mb-2">Rapide</h3>
+                <p className="text-slate-300">Livraison en 48 à 72 heures</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl mb-4">✨</div>
+                <h3 className="text-xl font-semibold mb-2">Professionnel</h3>
+                <p className="text-slate-300">Équipe expérimentée et certifiée</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl mb-4">🔒</div>
+                <h3 className="text-xl font-semibold mb-2">Sécurisé</h3>
+                <p className="text-slate-300">Suivi complet de vos articles</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  // Page client (connecté)
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            Kirei
+          </h1>
+          <button
+            onClick={handleLogout}
+            className="inline-flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg font-semibold transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            Déconnexion
+          </button>
+        </div>
+      </div>
+
+      {/* Hero Section */}
+      <section className="pt-20 pb-16 px-4">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <div className="inline-block">
+            <div className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-100 rounded-full">
+              <Sparkles className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm font-semibold text-indigo-600">Service de nettoyage à domicile</span>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+              Bienvenue dans votre espace
+            </h2>
+            <p className="text-xl md:text-xl text-slate-600 font-light">
+              Gérez votre linge facilement
+            </p>
+          </div>
+
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto">
+            Déposez vos vêtements ou suivez vos commandes en cours
+          </p>
         </div>
       </section>
 
-      {/* Options Section */}
-      <section className="bg-slate-100 py-20 px-4">
-        <div className="max-w-5xl mx-auto">
-           <h2 className="text-3xl font-bold text-center mb-4">Nos Prestations</h2>
-           <p className="text-slate-500 text-center mb-16 max-w-2xl mx-auto">
-             Que ce soit pour votre linge du quotidien ou vos pièces les plus délicates, Kirei a la solution adaptée.
-           </p>
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { title: "Linge au kilo", desc: "Pour votre linge du quotidien : t-shirts, jeans, tenues de sport. Payez au poids !" },
-                { title: "Linge à la pièce", desc: "Pour vos chemises, robes, costumes et textiles délicats (soie, cachemire)." },
-                { title: "Linge de maison", desc: "Couettes, draps, rideaux. Un entretien professionnel pour vos grandes pièces." }
-              ].map((service, i) => (
-                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200">
-                  <h3 className="text-lg font-bold mb-2">{service.title}</h3>
-                  <p className="text-sm text-slate-500">{service.desc}</p>
+      {/* Main Actions */}
+      <section className="px-4 pb-20">
+        <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
+          {/* Deposit Card */}
+          <button
+            onClick={() => navigate('/deposit')}
+            className="group relative overflow-hidden rounded-3xl bg-white border-2 border-indigo-100 p-12 text-left transition-all hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-200"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            
+            <div className="relative space-y-6">
+              <div className="inline-flex p-4 bg-indigo-100 rounded-2xl group-hover:bg-indigo-200 transition-colors">
+                <Download className="w-8 h-8 text-indigo-600" />
+              </div>
+
+              <div>
+                <h3 className="text-3xl font-bold text-slate-900 mb-3">Déposer du linge</h3>
+                <p className="text-slate-600 text-lg">
+                  Envoyez-nous vos vêtements pour un nettoyage rapide et professionnel
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 space-y-3">
+                <div className="flex items-center gap-3 text-slate-600">
+                  <div className="w-2 h-2 rounded-full bg-indigo-400"></div>
+                  <span>Formulaire simple avec photos</span>
                 </div>
-              ))}
-           </div>
+                <div className="flex items-center gap-3 text-slate-600">
+                  <div className="w-2 h-2 rounded-full bg-indigo-400"></div>
+                  <span>Date et heure enregistrées</span>
+                </div>
+                <div className="flex items-center gap-3 text-slate-600">
+                  <div className="w-2 h-2 rounded-full bg-indigo-400"></div>
+                  <span>Suivi de votre commande</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-indigo-600 font-semibold pt-4 group-hover:gap-3 transition-all">
+                Commencer
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </div>
+          </button>
+
+          {/* Retrieve Card */}
+          <button
+            onClick={() => navigate('/retrieve')}
+            className="group relative overflow-hidden rounded-3xl bg-white border-2 border-purple-100 p-12 text-left transition-all hover:border-purple-400 hover:shadow-xl hover:shadow-purple-200"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+            <div className="relative space-y-6">
+              <div className="inline-flex p-4 bg-purple-100 rounded-2xl group-hover:bg-purple-200 transition-colors">
+                <RotateCw className="w-8 h-8 text-purple-600" />
+              </div>
+
+              <div>
+                <h3 className="text-3xl font-bold text-slate-900 mb-3">Récupérer du linge</h3>
+                <p className="text-slate-600 text-lg">
+                  Consultez l'état de votre linge et récupérez-le quand vous le souhaitez
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 space-y-3">
+                <div className="flex items-center gap-3 text-slate-600">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                  <span>Suivi en temps réel</span>
+                </div>
+                <div className="flex items-center gap-3 text-slate-600">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                  <span>Historique de vos commandes</span>
+                </div>
+                <div className="flex items-center gap-3 text-slate-600">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                  <span>États mises à jour par admin</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-purple-600 font-semibold pt-4 group-hover:gap-3 transition-all">
+                Consulter
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="px-4 pb-16 bg-slate-900 text-white rounded-t-3xl">
+        <div className="max-w-4xl mx-auto py-12">
+          <h2 className="text-3xl font-bold text-center mb-12">Pourquoi nous faire confiance?</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="text-4xl mb-4">⚡</div>
+              <h3 className="text-xl font-semibold mb-2">Rapide</h3>
+              <p className="text-slate-300">Livraison en 48 à 72 heures</p>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl mb-4">✨</div>
+              <h3 className="text-xl font-semibold mb-2">Professionnel</h3>
+              <p className="text-slate-300">Équipe expérimentée et certifiée</p>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl mb-4">🔒</div>
+              <h3 className="text-xl font-semibold mb-2">Sécurisé</h3>
+              <p className="text-slate-300">Suivi complet de vos articles</p>
+            </div>
+          </div>
         </div>
       </section>
     </div>
