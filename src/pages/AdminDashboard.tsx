@@ -175,12 +175,12 @@ export default function AdminDashboard() {
                     {expandedId === commande.id && (
                       <div className="px-6 pb-6 border-t border-slate-50 animate-in slide-in-from-top-2">
                         <div className="pt-6 space-y-6">
-                          {commande.vetements.map((v) => (
+                          {(commande.vetements || []).map((v) => (
                             <div key={v.id} className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
                               <div className="flex flex-col md:flex-row gap-6">
                                 {/* Photos */}
                                 <div className="flex -space-x-4 overflow-hidden">
-                                  {v.photos.map((p, pIdx) => (
+                                  {(v.photos || []).map((p, pIdx) => (
                                     <button 
                                       key={pIdx} 
                                       onClick={() => setSelectedPhotos(v.photos)}

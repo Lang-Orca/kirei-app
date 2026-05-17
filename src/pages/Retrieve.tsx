@@ -229,7 +229,7 @@ export default function Retrieve() {
                 {selectedCommandeId === commande.id && (
                   <div className="mt-6 pt-6 border-t border-slate-200 space-y-6 animate-in fade-in slide-in-from-top-2">
                     <div className="grid gap-4">
-                      {commande.vetements.map((v, i) => (
+                      {(commande.vetements || []).map((v, i) => (
                         <div key={i} className="p-4 bg-slate-50 rounded-xl flex gap-4">
                           {v.photos[0] && (
                             <img src={v.photos[0]} alt="Article" className="w-20 h-20 rounded-lg object-cover" />
