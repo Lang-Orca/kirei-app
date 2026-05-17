@@ -467,13 +467,13 @@ export default function Deposit() {
                         <span className="text-xs text-slate-400 font-mono">#{cmd.clientId}</span>
                       </div>
                       <h4 className="font-bold text-slate-800 text-lg">
-                        {cmd.vetements.length} catégorie(s) d'articles
+                        {(cmd.vetements || []).length} catégorie(s) d'articles
                       </h4>
                       <p className="text-sm text-slate-500">{formatDate(cmd.createdAt)}</p>
                     </div>
                     <div className="flex -space-x-4">
-                      {cmd.vetements.map((v, i) => (
-                        v.photos[0] && (
+                      {(cmd.vetements || []).map((v, i) => (
+                        v.photos && v.photos[0] && (
                           <img 
                             key={i} 
                             src={v.photos[0]} 
