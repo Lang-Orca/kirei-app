@@ -286,6 +286,45 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Contact Section */}
+      <section className="bg-indigo-600 py-20 px-4 text-white">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <h2 className="text-4xl font-bold">Besoin d'aide ?</h2>
+          <p className="text-xl opacity-90">Nos conseillers sont à votre disposition pour vous accompagner.</p>
+          
+          <div className="grid md:grid-cols-2 gap-6 pt-8">
+            <a 
+              href="tel:+237600000000"
+              className="flex items-center justify-center gap-4 bg-white/10 hover:bg-white/20 p-6 rounded-3xl border border-white/20 transition-all group"
+            >
+              <div className="p-3 bg-white rounded-2xl group-hover:scale-110 transition-transform">
+                <span className="text-indigo-600 text-2xl">📞</span>
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-xl">Appelez-nous</p>
+                <p className="opacity-70 text-sm">Réponse immédiate</p>
+              </div>
+            </a>
+
+            <button 
+              onClick={() => {
+                const chatBtn = document.querySelector('button[class*="fixed bottom-6"]') as HTMLButtonElement;
+                if (chatBtn) chatBtn.click();
+              }}
+              className="flex items-center justify-center gap-4 bg-white text-indigo-600 hover:bg-indigo-50 p-6 rounded-3xl transition-all group"
+            >
+              <div className="p-3 bg-indigo-100 rounded-2xl group-hover:scale-110 transition-transform">
+                <span className="text-indigo-600 text-2xl">💬</span>
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-xl">Chattez avec nous</p>
+                <p className="text-indigo-400 text-sm">Support 24/7</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

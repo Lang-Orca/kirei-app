@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAllCommandes, initDb } from '../lib/indexedDB';
 import type { Commande } from '../types';
-import { Package, Calendar, MapPin, Check, Clock, Truck } from 'lucide-react';
+import { Package, Calendar, MapPin, Check, Clock, Truck, ChevronDown, ChevronUp } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 
 function formatDate(dateString: string) {
@@ -48,15 +48,29 @@ function getStatusColor(status: string) {
 
 export default function Retrieve() {
   const navigate = useNavigate();
-  const { role, clientName } = useAuth();
+  const { role } = useAuth();
   const [allCommandes, setAllCommandes] = useState<Commande[]>([]);
   const [filteredCommandes, setFilteredCommandes] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchCode, setSearchCode] = useState('');
-  const [selectedCommande, setSelectedCommande] = useState<Commande | null>(null);
+  const [selectedCommandeId, setSelectedCommandeId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  // Rediriger si pas connecté comme client
+  const loadCommandes = useCallback(async () => {
+    try {
+      await initDb();
+      const stored = await getAllCommandes();
+      const sorted = stored.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setAllCommandes(sorted);
+      setFilteredCommandes([]);
+    } catch (err) {
+      console.error('Error loading commandes:', err);
+      setError('Erreur lors du chargement des commandes.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (role !== 'client') {
       navigate('/login');
@@ -65,23 +79,7 @@ export default function Retrieve() {
 
   useEffect(() => {
     loadCommandes();
-  }, []);
-
-  async function loadCommandes() {
-    try {
-      await initDb();
-      const stored = await getAllCommandes();
-      const sorted = stored.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setAllCommandes(sorted);
-      // Ne pas afficher par défaut les commandes du client, attendre la recherche par code
-      setFilteredCommandes([]);
-    } catch (err) {
-      console.error('Error loading commandes:', err);
-      setError('Erreur lors du chargement des commandes.');
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [loadCommandes]);
 
   function handleSearch() {
     setError('');
@@ -169,151 +167,111 @@ export default function Retrieve() {
         ) : (
           <div className="grid gap-6">
             {filteredCommandes.map((commande) => (
-              <button
+              <div
                 key={commande.id}
-                onClick={() => setSelectedCommande(selectedCommande?.id === commande.id ? null : commande)}
-                className="text-left transition-all"
+                className="bg-white rounded-2xl shadow hover:shadow-xl p-6 border border-slate-200 hover:border-purple-300 transition-all"
               >
-                <div className="bg-white rounded-2xl shadow hover:shadow-xl p-6 border border-slate-200 hover:border-purple-300 transition-all">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold text-slate-900">
-                          {commande.clientName}
-                        </h3>
-                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getStatusColor(commande.status)}`}>
-                          {getStatusIcon(commande.status)}
-                          <span className="text-sm font-semibold">{commande.status}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-4 text-slate-600 text-sm mb-3">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatDate(commande.createdAt)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4" />
-                          <span>{commande.vetement.pieces} pièce(s)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="capitalize">{commande.vetement.matiere}</span>
-                        </div>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="mt-4 space-y-2">
-                        <div className="flex text-xs text-slate-600 font-semibold mb-1">
-                          <span>Suivi de la commande</span>
-                        </div>
-                        <div className="relative h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all rounded-full ${
-                              commande.status === 'En attente' ? 'w-1/4 bg-yellow-400' :
-                              commande.status === 'Lavage' ? 'w-1/2 bg-blue-400' :
-                              commande.status === 'Prêt' ? 'w-3/4 bg-green-400' :
-                              'w-full bg-slate-400'
-                            }`}
-                          ></div>
-                        </div>
-                        <div className="flex justify-between text-xs text-slate-500">
-                          <span>Reçu</span>
-                          <span>En cours</span>
-                          <span>Prêt</span>
-                          <span>Livré</span>
-                        </div>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-slate-900">
+                        {commande.clientName}
+                      </h3>
+                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getStatusColor(commande.status)}`}>
+                        {getStatusIcon(commande.status)}
+                        <span className="text-sm font-semibold">{commande.status}</span>
                       </div>
                     </div>
 
-                    {commande.vetement.photoDataUrl && (
-                      <img
-                        src={commande.vetement.photoDataUrl}
-                        alt="Linge"
-                        className="w-28 h-28 rounded-lg object-cover flex-shrink-0"
-                      />
-                    )}
+                    <div className="flex flex-wrap gap-4 text-slate-600 text-sm mb-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatDate(commande.createdAt)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Package className="w-4 h-4" />
+                        <span>{commande.vetements.length} lot(s) d'articles</span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mt-4 space-y-2">
+                      <div className="flex text-xs text-slate-600 font-semibold mb-1">
+                        <span>Suivi de la commande</span>
+                      </div>
+                      <div className="relative h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all rounded-full ${
+                            commande.status === 'En attente' ? 'w-1/4 bg-yellow-400' :
+                            commande.status === 'Lavage' ? 'w-1/2 bg-blue-400' :
+                            commande.status === 'Prêt' ? 'w-3/4 bg-green-400' :
+                            'w-full bg-slate-400'
+                          }`}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Reçu</span>
+                        <span>En cours</span>
+                        <span>Prêt</span>
+                        <span>Livré</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Details Section (Expanded) */}
-                  {selectedCommande?.id === commande.id && (
-                    <div className="mt-6 pt-6 border-t border-slate-200 space-y-4 animate-in fade-in slide-in-from-top-2">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <p className="text-sm font-semibold text-slate-600">Détails du linge</p>
-                          <div className="p-4 bg-slate-50 rounded-lg space-y-2 text-sm">
-                            <p>
-                              <span className="text-slate-600">Pièces:</span>
-                              <span className="font-semibold ml-2">{commande.vetement.pieces}</span>
-                            </p>
-                            <p>
-                              <span className="text-slate-600">Matière:</span>
-                              <span className="font-semibold ml-2 capitalize">{commande.vetement.matiere}</span>
-                            </p>
-                            <p>
-                              <span className="text-slate-600">Poids:</span>
-                              <span className="font-semibold ml-2">{commande.vetement.poidsKg} kg</span>
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-sm font-semibold text-slate-600">Rendez-vous de récupération</p>
-                          <div className="p-4 bg-purple-50 rounded-lg space-y-3">
-                            {commande.status === 'Prêt' || commande.status === 'Livré' ? (
-                              <>
-                                <div className="flex items-center gap-3">
-                                  <MapPin className="w-5 h-5 text-purple-600" />
-                                  <div>
-                                    <p className="text-xs text-slate-600">Lieu de récupération</p>
-                                    <p className="font-semibold">123 Rue de la Propreté, Paris</p>
-                                  </div>
-                                </div>
-                                <button className="w-full py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm">
-                                  Confirmer la récupération
-                                </button>
-                              </>
-                            ) : (
-                              <p className="text-sm text-slate-600">
-                                Votre linge est actuellement {commande.status.toLowerCase()}. 
-                                Un rendez-vous de récupération vous sera proposé bientôt.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold text-slate-600">Remarques</p>
-                        <textarea
-                          placeholder="Des remarques spéciales pour votre récupération?"
-                          className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-none"
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <button
+                    onClick={() => setSelectedCommandeId(selectedCommandeId === commande.id ? null : commande.id)}
+                    className="p-2 hover:bg-slate-100 rounded-full transition-colors self-center"
+                  >
+                    {selectedCommandeId === commande.id ? <ChevronUp /> : <ChevronDown />}
+                  </button>
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
 
-        {/* Help Section */}
-        {filteredCommandes.length > 0 && (
-          <div className="mt-12 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-3xl p-8">
-            <h2 className="text-2xl font-bold mb-4">Besoin d'aide?</h2>
-            <p className="mb-6 text-purple-100">
-              Vous ne trouvez pas votre commande ou avez une question? 
-              Contactez-nous par téléphone ou par email.
-            </p>
-            <div className="flex flex-col md:flex-row gap-4">
-              <button className="px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-colors">
-                Nous appeler
-              </button>
-              <button className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold hover:bg-purple-800 transition-colors border border-purple-500">
-                Nous envoyer un message
-              </button>
-            </div>
+                {/* Details Section (Expanded) */}
+                {selectedCommandeId === commande.id && (
+                  <div className="mt-6 pt-6 border-t border-slate-200 space-y-6 animate-in fade-in slide-in-from-top-2">
+                    <div className="grid gap-4">
+                      {commande.vetements.map((v, i) => (
+                        <div key={i} className="p-4 bg-slate-50 rounded-xl flex gap-4">
+                          {v.photos[0] && (
+                            <img src={v.photos[0]} alt="Article" className="w-20 h-20 rounded-lg object-cover" />
+                          )}
+                          <div className="flex-1 space-y-1">
+                            <p className="font-bold text-slate-800">{v.description}</p>
+                            <div className="flex gap-3 text-xs text-slate-500">
+                              <span>{v.pieces} pièces</span>
+                              <span>•</span>
+                              <span>{v.poidsKg} kg</span>
+                              <span>•</span>
+                              <span className="capitalize">{v.matiere}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-4 bg-purple-50 rounded-xl space-y-3">
+                      <p className="text-sm font-bold text-purple-900">Rendez-vous de récupération</p>
+                      {commande.status === 'Prêt' || commande.status === 'Livré' ? (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <MapPin className="w-5 h-5 text-purple-600" />
+                            <div>
+                              <p className="text-xs text-slate-600">Lieu de récupération</p>
+                              <p className="font-semibold">Kirei Pressing, Centre-ville</p>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-600">
+                          Votre linge est actuellement {commande.status.toLowerCase()}. 
+                          Un rendez-vous vous sera proposé dès qu'il sera prêt.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

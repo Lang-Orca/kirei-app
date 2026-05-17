@@ -13,18 +13,30 @@ export interface LaundryService {
 export interface Vetement {
   id: string;
   pieces: number;
-  matiere: 'coton' | 'soie' | 'synthétique' | string;
+  matiere: string;
   poidsKg: number;
-  photoDataUrl: string;
+  photos: string[];
+  description: string;
+  qualite: string;
+  couleur: string;
+  laverSeul: boolean;
 }
 
 export interface Commande {
   id: string;
   clientName: string;
   clientId: string;
-  vetement: Vetement;
+  vetements: Vetement[];
   status: OrderStatus;
   createdAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: string;
 }
 
 export interface OrderState {

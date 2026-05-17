@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Shirt } from 'lucide-react';
+import Chat from './Chat';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -29,6 +30,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <p className="text-slate-500 text-sm">© 2026 Kirei - Votre linge en un clic.</p>
         </div>
       </footer>
+      <Chat />
     </div>
   );
 }
