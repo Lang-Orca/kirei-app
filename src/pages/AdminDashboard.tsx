@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAllCommandes, updateCommande } from '../lib/indexedDB';
-import type { Commande } from '../types';
+import type { Commande, OrderStatus } from '../types';
 import { LogOut, Save, Package, AlertTriangle, Shirt, Weight, Palette, Star, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 function formatDate(dateString: string) {
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     try {
       const commande = commandes.find(c => c.id === commandeId);
       if (commande) {
-        const updated = { ...commande, status: newSt as any };
+        const updated: Commande = { ...commande, status: newSt as OrderStatus };
         await updateCommande(updated);
         setCommandes(commandes.map(c => c.id === commandeId ? updated : c));
         setEditingId(null);

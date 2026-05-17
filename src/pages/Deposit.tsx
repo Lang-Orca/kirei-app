@@ -57,7 +57,7 @@ export default function Deposit() {
   });
 
   const { control, register, handleSubmit, formState: { errors }, setValue, watch } = useForm<FormData>({
-    resolver: yupResolver(schema) as any,
+    resolver: yupResolver(schema) as import('react-hook-form').Resolver<FormData>,
     defaultValues: {
       items: [{
         id: crypto.randomUUID(),
