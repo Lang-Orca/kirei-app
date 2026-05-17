@@ -48,7 +48,7 @@ function getStatusColor(status: string) {
 
 export default function Retrieve() {
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, clientName } = useAuth();
   const [allCommandes, setAllCommandes] = useState<Commande[]>([]);
   const [filteredCommandes, setFilteredCommandes] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +60,13 @@ export default function Retrieve() {
     try {
       await initDb();
       const stored = await getAllCommandes();
-      const sorted = stored.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      
+      let filtered = stored;
+      if (role === 'client') {
+        filtered = stored.filter(c => c.clientName === clientName);
+      }
+
+      const sorted = filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setAllCommandes(sorted);
       setFilteredCommandes([]);
     } catch (err) {
@@ -69,7 +75,7 @@ export default function Retrieve() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [role, clientName]);
 
   useEffect(() => {
     if (role !== 'client') {
