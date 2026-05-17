@@ -190,10 +190,9 @@ export default function Retrieve() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Package className="w-4 h-4" />
-                        <span>{commande.vetements.length} lot(s) d'articles</span>
+                        <span>{(commande.vetements || []).length} lot(s) d'articles</span>
                       </div>
                     </div>
-
                     {/* Progress Bar */}
                     <div className="mt-4 space-y-2">
                       <div className="flex text-xs text-slate-600 font-semibold mb-1">

@@ -128,7 +128,7 @@ export default function AdminDashboard() {
                           <span className="text-xs text-slate-400">{formatDate(commande.createdAt)}</span>
                         </div>
                         <h3 className="text-xl font-bold text-slate-900">{commande.clientName}</h3>
-                        <p className="text-slate-500">{commande.vetements.length} catégorie(s) d'articles</p>
+                        <p className="text-slate-500">{(commande.vetements || []).length} catégorie(s) d'articles</p>
                       </div>
 
                       <div className="flex items-center gap-4">

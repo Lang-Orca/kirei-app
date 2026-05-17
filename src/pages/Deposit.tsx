@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveCommande, getAllCommandes, initDb } from '../lib/indexedDB';
 import type { Commande } from '../types';
-import { Calendar, Package, Shirt, Weight, User, Image, Check, Plus, Trash2, AlertTriangle, Palette, Star } from 'lucide-react';
+import { Calendar, Package, Shirt, Weight, User, Image, Check, Plus, Trash2, AlertTriangle, Palette, Star, RotateCw } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 
 type ItemForm = {
