@@ -37,6 +37,7 @@ export interface ChatMessage {
   senderName: string;
   text: string;
   timestamp: string;
+  clientId: string; // The client this conversation belongs to
 }
 
 export interface OrderState {

@@ -11,6 +11,11 @@ export default function Chat() {
   const [isOpen, setIsOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // For the admin, we might need a way to select which client they are talking to.
+  // For now, let's keep it simple: clients only see messages linked to their "clientName".
+  // Admin sees EVERYTHING or we filter by the active conversation if we had a selection UI.
+  // Since we don't have a selection UI for admin yet, admin sees all messages.
+
   useEffect(() => {
     if (isOpen) {
       loadMessages();
@@ -27,7 +32,14 @@ export default function Chat() {
 
   async function loadMessages() {
     const all = await getAllMessages();
-    setMessages(all.sort((a, b) => a.timestamp.localeCompare(b.timestamp)));
+    let filtered = all;
+    
+    if (role === 'client') {
+      // Client only sees their own conversation
+      filtered = all.filter(m => m.clientId === clientName);
+    }
+    
+    setMessages(filtered.sort((a, b) => a.timestamp.localeCompare(b.timestamp)));
   }
 
   async function handleSendMessage(e: React.FormEvent) {
@@ -40,6 +52,8 @@ export default function Chat() {
       senderName: role === 'admin' ? 'Admin Kirei' : (clientName || 'Client'),
       text: newMessage.trim(),
       timestamp: new Date().toISOString(),
+      clientId: clientName || 'anonymous', // If admin sends, it should ideally target a specific client. 
+                                          // For now, let's use the current "clientName" context if available.
     };
 
     await saveMessage(msg);

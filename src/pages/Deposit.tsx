@@ -1,34 +1,34 @@
-import { useEffect, useState, useCallback, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveCommande, getAllCommandes, initDb } from '../lib/indexedDB';
 import type { Commande } from '../types';
-import { Calendar, Package, Shirt, Weight, User, Image, Check, Plus, Trash2, AlertTriangle, Palette, Star, RotateCw } from 'lucide-react';
+import { Calendar, Package, Shirt, Weight, User, Check, Plus, Trash2, AlertTriangle, Palette, Star, RotateCw, Image as ImageIcon } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 
-type ItemForm = {
-  id: string;
-  pieces: number;
-  matiere: string;
-  poidsKg: number;
-  photos: string[];
-  description: string;
-  qualite: string;
-  couleur: string;
-  laverSeul: boolean;
-};
+// React Hook Form & Yup
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 
-const createEmptyItem = (): ItemForm => ({
-  id: crypto.randomUUID(),
-  pieces: 1,
-  matiere: 'coton',
-  poidsKg: 0.5,
-  photos: [],
-  description: '',
-  qualite: 'Bon état',
-  couleur: '',
-  laverSeul: false,
+// Validation Schema
+const schema = yup.object().shape({
+  items: yup.array().of(
+    yup.object().shape({
+      id: yup.string().required(),
+      pieces: yup.number().typeError('Nombre requis').min(1, 'Minimum 1').required(),
+      matiere: yup.string().required(),
+      poidsKg: yup.number().typeError('Nombre requis').min(0, 'Minimum 0').required(),
+      photos: yup.array().of(yup.string()).min(1, 'Ajoutez au moins une photo'),
+      description: yup.string().required('La description est requise'),
+      qualite: yup.string().required(),
+      couleur: yup.string().required('La couleur est requise'),
+      laverSeul: yup.boolean(),
+    })
+  ).min(1, 'Ajoutez au moins un lot')
 });
+
+type FormData = yup.InferType<typeof schema>;
 
 function formatDate(dateString: string) {
   return new Date(dateString).toLocaleString('fr-FR', {
@@ -43,12 +43,11 @@ function formatDate(dateString: string) {
 export default function Deposit() {
   const navigate = useNavigate();
   const { role, clientName } = useAuth();
-  const [items, setItems] = useState<ItemForm[]>([createEmptyItem()]);
-  const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [retrievalCode, setRetrievalCode] = useState<string>('');
+  
   const currentDateTime = new Date().toLocaleString('fr-FR', {
     day: '2-digit',
     month: '2-digit',
@@ -57,15 +56,41 @@ export default function Deposit() {
     minute: '2-digit',
   });
 
+  const { control, register, handleSubmit, formState: { errors }, setValue, watch } = useForm<FormData>({
+    resolver: yupResolver(schema) as any,
+    defaultValues: {
+      items: [{
+        id: crypto.randomUUID(),
+        pieces: 1,
+        matiere: 'coton',
+        poidsKg: 0.5,
+        photos: [],
+        description: '',
+        qualite: 'Bon état',
+        couleur: '',
+        laverSeul: false,
+      }]
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "items"
+  });
+
   const loadCommandes = useCallback(async () => {
     try {
       await initDb();
       const stored = await getAllCommandes();
-      setCommandes(stored.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      
+      // PRIVACY: Filter history by current client name
+      const filtered = stored.filter(c => c.clientName === clientName);
+      
+      setCommandes(filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     } catch (err) {
       console.error('IndexedDB load failed', err);
     }
-  }, []);
+  }, [clientName]);
 
   useEffect(() => {
     if (role !== 'client') {
@@ -77,24 +102,11 @@ export default function Deposit() {
     loadCommandes();
   }, [loadCommandes]);
 
-  function addItem() {
-    setItems([...items, createEmptyItem()]);
-  }
-
-  function removeItem(id: string) {
-    if (items.length > 1) {
-      setItems(items.filter(i => i.id !== id));
-    }
-  }
-
-  function updateItem(id: string, updates: Partial<ItemForm>) {
-    setItems(items.map(i => i.id === id ? { ...i, ...updates } : i));
-  }
-
-  function handlePhotoChange(id: string, event: ChangeEvent<HTMLInputElement>) {
+  function handlePhotoChange(index: number, event: React.ChangeEvent<HTMLInputElement>) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    const currentPhotos = watch(`items.${index}.photos`) || [];
     const newPhotos: string[] = [];
     let processed = 0;
 
@@ -107,40 +119,21 @@ export default function Deposit() {
         }
         processed++;
         if (processed === files.length) {
-          const item = items.find(i => i.id === id);
-          if (item) {
-            updateItem(id, { photos: [...item.photos, ...newPhotos] });
-          }
+          setValue(`items.${index}.photos`, [...currentPhotos, ...newPhotos], { shouldValidate: true });
         }
       };
       reader.readAsDataURL(file);
     });
   }
 
-  function removePhoto(itemId: string, photoIndex: number) {
-    const item = items.find(i => i.id === itemId);
-    if (item) {
-      const newPhotos = [...item.photos];
-      newPhotos.splice(photoIndex, 1);
-      updateItem(itemId, { photos: newPhotos });
-    }
+  function removePhoto(itemIndex: number, photoIndex: number) {
+    const currentPhotos = watch(`items.${itemIndex}.photos`) || [];
+    const updated = [...currentPhotos];
+    updated.splice(photoIndex, 1);
+    setValue(`items.${itemIndex}.photos`, updated, { shouldValidate: true });
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
-
-    for (const item of items) {
-      if ((item.photos || []).length === 0) {
-        setError('Veuillez ajouter au moins une photo pour chaque lot.');
-        return;
-      }
-      if (!item.description.trim()) {
-        setError('Veuillez ajouter une description pour chaque lot.');
-        return;
-      }
-    }
-
+  const onSubmit = async (data: FormData) => {
     setSaving(true);
 
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -155,16 +148,16 @@ export default function Deposit() {
       clientId: code,
       status: 'En attente',
       createdAt: new Date().toISOString(),
-      vetements: items.map(item => ({
-        id: item.id,
-        pieces: item.pieces,
-        matiere: item.matiere,
-        poidsKg: item.poidsKg,
-        photos: item.photos,
-        description: item.description,
-        qualite: item.qualite,
-        couleur: item.couleur,
-        laverSeul: item.laverSeul,
+      vetements: (data.items || []).map(item => ({
+        id: item.id || crypto.randomUUID(),
+        pieces: item.pieces || 1,
+        matiere: item.matiere || 'coton',
+        poidsKg: item.poidsKg || 0,
+        photos: item.photos || [],
+        description: item.description || '',
+        qualite: item.qualite || 'Bon état',
+        couleur: item.couleur || '',
+        laverSeul: !!item.laverSeul,
       })),
     };
 
@@ -172,17 +165,14 @@ export default function Deposit() {
       await saveCommande(newCommande);
       setRetrievalCode(code);
       setSuccess(true);
-      setItems([createEmptyItem()]);
       await loadCommandes();
     } catch (err) {
-      setError('Erreur lors de la sauvegarde. Veuillez réessayer.');
-      console.error(err);
+      console.error('Erreur lors de la sauvegarde:', err);
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  // Render Success Screen
   if (success) {
     return (
       <div className="min-h-screen bg-white">
@@ -228,7 +218,7 @@ export default function Deposit() {
       
       <div className="py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             <div className="bg-white rounded-3xl shadow-lg p-6 flex flex-col md:flex-row items-center justify-between gap-4 border border-indigo-100">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-indigo-100 rounded-2xl">
@@ -251,12 +241,12 @@ export default function Deposit() {
             </div>
 
             <div className="space-y-6">
-              {items.map((item, index) => (
-                <div key={item.id} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              {fields.map((field, index) => (
+                <div key={field.id} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="bg-slate-50 px-8 py-4 border-b border-slate-200 flex items-center justify-between">
                     <h3 className="font-bold text-slate-700">Lot #{index + 1}</h3>
-                    {items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(item.id)} className="text-red-500 p-2">
+                    {fields.length > 1 && (
+                      <button type="button" onClick={() => remove(index)} className="text-red-500 p-2">
                         <Trash2 className="w-5 h-5" />
                       </button>
                     )}
@@ -267,11 +257,12 @@ export default function Deposit() {
                       <div className="space-y-2">
                         <label className="text-xs font-bold text-slate-500 uppercase">Description</label>
                         <textarea
-                          value={item.description}
-                          onChange={(e) => updateItem(item.id, { description: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                          {...register(`items.${index}.description` as const)}
+                          className={`w-full px-4 py-3 rounded-xl border ${errors.items?.[index]?.description ? 'border-red-500' : 'border-slate-200'} focus:ring-2 focus:ring-indigo-500 outline-none`}
                           rows={2}
+                          placeholder="Ex: 3 chemises, 2 pantalons..."
                         />
+                        {errors.items?.[index]?.description && <p className="text-red-500 text-xs">{errors.items[index]?.description?.message}</p>}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -279,8 +270,7 @@ export default function Deposit() {
                           <label className="text-xs font-bold text-slate-500 uppercase">Pièces</label>
                           <input
                             type="number"
-                            value={item.pieces}
-                            onChange={(e) => updateItem(item.id, { pieces: parseInt(e.target.value) || 1 })}
+                            {...register(`items.${index}.pieces` as const)}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200"
                           />
                         </div>
@@ -289,8 +279,7 @@ export default function Deposit() {
                           <input
                             type="number"
                             step="0.1"
-                            value={item.poidsKg}
-                            onChange={(e) => updateItem(item.id, { poidsKg: parseFloat(e.target.value) || 0 })}
+                            {...register(`items.${index}.poidsKg` as const)}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200"
                           />
                         </div>
@@ -300,23 +289,22 @@ export default function Deposit() {
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-500 uppercase">Qualité</label>
                           <select
-                            value={item.qualite}
-                            onChange={(e) => updateItem(item.id, { qualite: e.target.value })}
+                            {...register(`items.${index}.qualite` as const)}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200"
                           >
-                            <option>Neuf</option>
-                            <option>Bon état</option>
-                            <option>Usagé</option>
-                            <option>Abîmé</option>
+                            <option value="Neuf">Neuf</option>
+                            <option value="Bon état">Bon état</option>
+                            <option value="Usagé">Usagé</option>
+                            <option value="Abîmé">Abîmé</option>
                           </select>
                         </div>
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-500 uppercase">Couleur</label>
                           <input
                             type="text"
-                            value={item.couleur}
-                            onChange={(e) => updateItem(item.id, { couleur: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                            {...register(`items.${index}.couleur` as const)}
+                            className={`w-full px-4 py-3 rounded-xl border ${errors.items?.[index]?.couleur ? 'border-red-500' : 'border-slate-200'}`}
+                            placeholder="Multi, Blanc..."
                           />
                         </div>
                       </div>
@@ -324,30 +312,33 @@ export default function Deposit() {
                       <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-2xl">
                         <input
                           type="checkbox"
-                          id={`laverSeul-${item.id}`}
-                          checked={item.laverSeul}
-                          onChange={(e) => updateItem(item.id, { laverSeul: e.target.checked })}
+                          id={`laverSeul-${index}`}
+                          {...register(`items.${index}.laverSeul` as const)}
                         />
-                        <label htmlFor={`laverSeul-${item.id}`} className="text-sm font-bold text-orange-800">Laver séparément</label>
+                        <label htmlFor={`laverSeul-${index}`} className="text-sm font-bold text-orange-800">Laver séparément</label>
                       </div>
                     </div>
 
                     <div className="space-y-4">
-                      <label className="text-xs font-bold text-slate-500 uppercase">Photos ({(item.photos || []).length})</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase">
+                        Photos ({watch(`items.${index}.photos`)?.length || 0})
+                      </label>
+                      
                       <div className="grid grid-cols-2 gap-3">
-                        {(item.photos || []).map((photo, pIdx) => (
+                        {watch(`items.${index}.photos`)?.map((photo, pIdx) => (
                           <div key={pIdx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200">
                             <img src={photo} alt="Linge" className="w-full h-full object-cover" />
-                            <button type="button" onClick={() => removePhoto(item.id, pIdx)} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-md">
+                            <button type="button" onClick={() => removePhoto(index, pIdx)} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-md">
                               <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
                         ))}
-                        <label className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer text-slate-400">
+                        <label className={`aspect-square rounded-xl border-2 border-dashed ${errors.items?.[index]?.photos ? 'border-red-500 bg-red-50' : 'border-slate-300'} flex flex-col items-center justify-center cursor-pointer text-slate-400`}>
                           <Plus className="w-8 h-8" />
-                          <input type="file" accept="image/*" multiple onChange={(e) => handlePhotoChange(item.id, e)} className="hidden" />
+                          <input type="file" accept="image/*" multiple onChange={(e) => handlePhotoChange(index, e)} className="hidden" />
                         </label>
                       </div>
+                      {errors.items?.[index]?.photos && <p className="text-red-500 text-xs">{errors.items[index]?.photos?.message}</p>}
                     </div>
                   </div>
                 </div>
@@ -357,18 +348,21 @@ export default function Deposit() {
             <div className="flex flex-col gap-4">
               <button
                 type="button"
-                onClick={addItem}
+                onClick={() => append({
+                  id: crypto.randomUUID(),
+                  pieces: 1,
+                  matiere: 'coton',
+                  poidsKg: 0.5,
+                  photos: [],
+                  description: '',
+                  qualite: 'Bon état',
+                  couleur: '',
+                  laverSeul: false,
+                })}
                 className="w-full py-4 border-2 border-dashed border-indigo-200 rounded-3xl text-indigo-600 font-bold hover:bg-indigo-50 transition-all"
               >
                 + Ajouter une autre catégorie
               </button>
-
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-700 font-bold">
-                  <AlertTriangle className="w-6 h-6" />
-                  <span>{error}</span>
-                </div>
-              )}
 
               <button
                 type="submit"
@@ -384,7 +378,7 @@ export default function Deposit() {
             <div className="mt-20">
               <h2 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">
                 <RotateCw className="w-6 h-6 text-indigo-600" />
-                Historique récent
+                Mon historique de dépôts
               </h2>
               <div className="space-y-4">
                 {(commandes || []).slice(0, 3).map((cmd) => (
